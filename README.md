@@ -28,8 +28,11 @@ This project is a Flask-based chatbot application that uses Google's Generative 
 1. Clone the repository:
 
   ```bash
-  git clone https://github.com/your-repo/flask-chatbot.git
-  cd flask-chatbot
+  git clone https://github.com/ghodkeadityarao/Conversational-AI-Chatbot.git
+  ```
+
+  ``` bash
+  cd Conversational-AI-Chatbot
   ```
 
 2. Install Requirements:
