@@ -1,113 +1,73 @@
 # Conversational AI Chatbot
 
-This project is a Flask-based chatbot application that uses Google's Generative AI (`gemini-pro`) to provide intelligent conversational responses. It features user intent handling, context awareness, and a web-based chat interface.
+A Flask chat app. Simple questions (the time, the date, weather requests, your name) are answered instantly on the server; everything else goes to Google's Gemini model, and the reply streams into the page as it is written.
 
-## Features
+## What it has
 
-- **AI-Powered Chat**: Integrates with the Gemini model to generate natural and contextual responses.
-- **User Context**: Stores user-specific information (e.g., names) for personalized conversations.
-- **Basic Intent Handling**: Provides quick responses for common queries such as the current time or weather.
-- **Error Handling**: Gracefully manages errors and provides user-friendly messages.
-- **Web Interface**: Includes a simple web-based chat interface.
+- **Streaming chat page:** the reply appears word by word, with a typing indicator, safe Markdown (bold, italics, lists, links, code blocks), starter questions, Enter to send and Shift+Enter for a new line, a "New chat" button and a built-in help panel. Dark and light themes follow the device, and it works on phones.
+- **A private conversation for every visitor:** each visitor gets a random id in an HTTP-only cookie and their own history and name, kept in server memory for two hours and never written to disk. (The original shared one conversation between everyone.)
+- **Quick answers without the model:**
+  - the time and date, in the visitor's own time zone, taken from the browser;
+  - weather requests, answered honestly as "I don't have live weather data";
+  - remembering a name from "My name is ...", "Call me ..." and similar, in any capitalisation, and answering "What's my name?";
+  - questions that only mention these words ("What time did the Roman Empire fall?", "How do weather balloons work?") go to the model.
+- **The current Gemini SDK:** the `google-genai` package, with the model chosen by a setting (`gemini-2.5-flash` by default) and a system prompt that tells the model it cannot see the time or the weather.
+- **Protection for the API key:**
+  - a limit of 30 model questions per visitor session (new chat does not reset it);
+  - 15 messages per minute per network address;
+  - a shared daily budget of 1,000 model calls;
+  - quick answers cost nothing against these limits, and a failed model call is not counted.
+- **Plain-language errors:** a busy model, a blocked request, a bad key or a missing model each get a clear message; raw error text from Google never reaches the page.
+- **Safe by construction:** replies are escaped before display, the page loads no inline scripts or styles (enforced by a content security policy), message length and body size are capped, and no secret is kept in the repository.
+- **Works without a key:** the quick answers still work and chat explains that the model is not set up.
 
----
+## Configuration
 
-## Technologies Used
+Set as environment variables (or in a local `.env`, which git ignores; `.env.example` lists them):
 
-- **Python**: Core programming language for the backend.
-- **Flask**: Web framework for serving the application and managing routes.
-- **Google Generative AI**: Powered by the Gemini model for chatbot capabilities.
-- **HTML**: For the chat interface (`chat.html`).
-- **Regular Expressions (re)**: For cleaning and formatting responses.
-- **dotenv**: For managing environment variables securely.
+| Variable | Meaning | Default |
+|---|---|---|
+| `GEMINI_API_KEY` | Google AI Studio key (`GOOGLE_API_KEY` also works) | none |
+| `GEMINI_MODEL` | model name | `gemini-2.5-flash` |
+| `QUESTIONS_PER_SESSION`, `REQUESTS_PER_MINUTE`, `MODEL_CALLS_PER_DAY` | the limits above | 30, 15, 1000 |
+| `MAX_INPUT_CHARS`, `MAX_HISTORY_MESSAGES`, `MAX_OUTPUT_TOKENS` | message length, remembered messages, reply length | 2000, 24, 1024 |
+| `TRUST_PROXY` | set to 1 behind a proxy so each visitor's own address is used for the rate limit | off |
 
----
+## Results
 
-## Setup and Configuration
+The quick-answer rules were compared with the original ones on 105 hand-written messages with the correct handling known for each (no model calls, no API key). Output is in `evaluation/results/`.
 
-1. Clone the repository:
+| | Original | New |
+|---|---|---|
+| Messages handled correctly | 46 of 105 (43.8%) | 104 of 105 (99.0%) |
+| Time requests | 8 of 14 | 14 of 14 |
+| Date requests | 0 of 8 | 8 of 8 |
+| Weather requests | 9 of 12 | 12 of 12 |
+| Introductions ("My name is ...") with the right name | 2 of 14 | 14 of 14 |
+| Introduction plus a question (name remembered, question answered) | 0 of 6 | 6 of 6 |
+| Messages that should reach the model and did | 27 of 51 | 50 of 51 |
+| Questions wrongly kept from the model | 24 | 1 |
 
-  ```bash
-  git clone https://github.com/ghodkeadityarao/Conversational-AI-Chatbot.git
-  ```
+The original matched words anywhere, so "What time did the Roman Empire fall?" returned the server's clock, every mention of "weather" got the same canned reply, "My name is Sam" with a capital M came back as "Nice to meet you, My name is Sam!", and a name followed by a question dropped the question. The one remaining miss is "what's the weather like on Mars".
 
-  ``` bash
-  cd Conversational-AI-Chatbot
-  ```
+## Limits
 
-2. Install Requirements:
-  ```bash
-  pip install -r requirements.txt 
-  ```
+- **These numbers are in-sample.** The message set was written by the author of the new rules and the rules were tuned on messages of these kinds, so 99% is an upper bound, not a rate for real traffic.
+- **The live model was not tested.** There was no API key during development: the Gemini calls were checked against the installed SDK's signatures and tested with a fake client, so the first real request is the first real test. The default model's free-tier quota is not verified.
+- Conversations and limits live in one process's memory: run a single worker process, and a restart clears them.
+- The quick-answer rules understand English only, and the time uses the visitor's browser time zone (UTC if it is missing).
+- The Markdown display is deliberately small (no tables or images).
+- The model can be wrong; the page says so.
 
-3. Set up your environment variables: (Enter the API Key in the space given)
-  ``` bash
-  GOOGLE_API_KEY=your_google_api_key
-  ```
+## Repository
 
-To get your personal API key, go to `Google AI Studio` and create API key.
-Website: `https://aistudio.google.com/app/apikey`
-
-4. Run the application:
-  ``` bash
-  python app.py
-  ```
-
-5. Open your browser and navigate to:
-  ```bash
-  http://127.0.0.1:5000
-  ```
-
-6. You can click on `help` to understand how the bot works.
-
-## How to Use the Bot
-
-Once the chatbot is running, follow these steps to interact with it effectively:
-
-1. **Access the Chat Interface**:
-   - Open your web browser and navigate to:
-     
-     ```plaintext
-     http://127.0.0.1:5000
-     ```
-
-2. **Start a Conversation**:
-   - Type your message into the chat input box and press `"Send"`.
-
-3. **Introduce Yourself** (Optional):
-   - You can personalize the chat by introducing yourself with a message like: `My name is [Your Name]`
-   - The bot will remember your name during the session and use it to personalize responses.
-
-4. **Ask Questions or Chat**:
-   - Feel free to ask questions or have a general conversation. The bot can:
-     - Provide information (e.g., "What time is it?")
-     - Help with simple queries (e.g., "Tell me a joke.")
-     - Respond intelligently to your messages.
-
-5. **Receive AI-Generated Responses**:
-   - For messages without pre-programmed intents, the bot uses Google Generative AI (`gemini-pro`) to generate context-aware and conversational responses.
-
-6. **Error Handling**:
-   - If the bot doesn't understand your message or an issue arises, it will respond with:
-     ```
-     I’m sorry, I didn’t understand that. Could you please rephrase?
-     ```
-
-8. **Stop or Reset the Chat**:
-   - To refresh the chat session or reset the bot's memory, simply reload the page.
-
----
-
-## Sample Interface and Conversation
-
-- `Interface`
-  
-![image](https://github.com/user-attachments/assets/cbc623bb-f20c-4d2d-8012-f72b9c60da78)
-
-- `Conversation`
-
-![image](https://github.com/user-attachments/assets/8c5c1780-4e1f-4a28-bf42-09b56fefab20)
-
-![image](https://github.com/user-attachments/assets/89bbd14d-428d-465d-bf7f-f5bc8b79faf8)
-
-  
+| Path | Contents |
+|---|---|
+| `app.py` | Flask app: page, streaming chat route, new-chat route, limits and headers |
+| `chatbot/intents.py` | Quick answers: time, date, weather, names |
+| `chatbot/llm.py` | Gemini wrapper: streaming, system prompt, plain-language errors |
+| `chatbot/sessions.py` | Per-visitor sessions and the rate and daily limits |
+| `chatbot/config.py` | Settings from environment variables |
+| `templates/`, `static/` | Chat page, styles and script |
+| `evaluation/` | The labelled messages, the original rules, and the comparison with its results |
+| `tests/` | 95 tests: quick answers, sessions and limits, the Gemini wrapper (with a fake client), and the app end to end |

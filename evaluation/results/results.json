@@ -1,0 +1,31 @@
+{
+  "messages": 105,
+  "models_calls_made": 0,
+  "note": "small hand-written set; shows the kinds of mistakes, not a rate for real traffic",
+  "old": {
+    "correct": 46,
+    "accuracy_pct": 43.8,
+    "by_kind": {
+      "date": "0/8",
+      "model": "27/51",
+      "name": "2/14",
+      "name+model": "0/6",
+      "time": "8/14",
+      "weather": "9/12"
+    },
+    "questions_wrongly_taken_from_the_model": 24
+  },
+  "new": {
+    "correct": 104,
+    "accuracy_pct": 99.0,
+    "by_kind": {
+      "date": "8/8",
+      "model": "50/51",
+      "name": "14/14",
+      "name+model": "6/6",
+      "time": "14/14",
+      "weather": "12/12"
+    },
+    "questions_wrongly_taken_from_the_model": 1
+  }
+}

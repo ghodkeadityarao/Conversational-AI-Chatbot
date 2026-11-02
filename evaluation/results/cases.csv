@@ -1,0 +1,106 @@
+message,expected,old,new,old_ok,new_ok
+What time is it?,time,time,time,True,True
+what's the current time,time,time,time,True,True
+Tell me the time,time,model,time,False,True
+time please,time,model,time,False,True
+what is the time now,time,model,time,False,True
+"Hey, what time is it right now?",time,time,time,True,True
+Could you tell me what time it is,time,time,time,True,True
+current time,time,time,time,True,True
+What time is it,time,time,time,True,True
+do you know what time it is,time,time,time,True,True
+what's the time,time,model,time,False,True
+WHAT TIME IS IT!!,time,time,time,True,True
+the time please,time,model,time,False,True
+exact time now,time,model,time,False,True
+What time did the Roman Empire fall?,model,time,model,False,True
+What time does the movie start?,model,time,model,False,True
+Explain time dilation,model,model,model,True,True
+What's the best time to visit Japan?,model,model,model,True,True
+How much time does it take to learn Python?,model,model,model,True,True
+What is the current time zone in Brazil?,model,time,model,False,True
+Is it time to buy a house?,model,model,model,True,True
+What time is it in Tokyo?,model,time,model,False,True
+At what time did World War 2 end?,model,time,model,False,True
+What time complexity does binary search have?,model,time,model,False,True
+Do you know what time it is in London?,model,time,model,False,True
+Write a story about time travel,model,model,model,True,True
+what's the current time signature of this song,model,time,model,False,True
+Help me manage my time better,model,model,model,True,True
+What day is it today?,date,model,date,False,True
+what's the date today,date,model,date,False,True
+today's date,date,model,date,False,True
+What is the date?,date,model,date,False,True
+what day is it,date,model,date,False,True
+Tell me today's date,date,model,date,False,True
+what's today's date,date,model,date,False,True
+What day is today?,date,model,date,False,True
+what's the weather today,weather,weather,weather,True,True
+weather in Paris,weather,weather,weather,True,True
+Is it going to rain tomorrow?,weather,model,weather,False,True
+How's the weather outside,weather,weather,weather,True,True
+weather,weather,weather,weather,True,True
+what is the temperature right now,weather,model,weather,False,True
+Will it snow this weekend?,weather,model,weather,False,True
+what's the weather like,weather,weather,weather,True,True
+weather forecast for tomorrow,weather,weather,weather,True,True
+check the weather in Mumbai,weather,weather,weather,True,True
+how is the weather here,weather,weather,weather,True,True
+tell me the weather tonight,weather,weather,weather,True,True
+What causes rain?,model,model,model,True,True
+Explain the weather cycle,model,weather,model,False,True
+write a poem about the weather,model,weather,model,False,True
+how do weather balloons work,model,weather,model,False,True
+weather vs climate: what's the difference?,model,weather,model,False,True
+what's a good weather app to build in flask,model,weather,model,False,True
+What temperature does water boil at?,model,model,model,True,True
+What was the weather like during the Battle of Waterloo?,model,weather,model,False,True
+Why is weather hard to predict?,model,weather,model,False,True
+Explain how a weather forecast model works,model,weather,model,False,True
+what is the weather api in python,model,weather,model,False,True
+Describe the climate of Brazil,model,model,model,True,True
+Recommend a book about weather history,model,weather,model,False,True
+what's the weather like on Mars,model,weather,weather,False,False
+My name is Sam,name:Sam,name:My name is Sam,name:Sam,False,True
+my name is sam,name:Sam,name:sam,name:Sam,False,True
+MY NAME IS ADITYA,name:ADITYA,name:MY NAME IS ADITYA,name:ADITYA,False,True
+my name is aditya rao.,name:Aditya Rao,name:aditya rao.,name:Aditya Rao,False,True
+"Hi, my name's Priya!",name:Priya,model,name:Priya,False,True
+Call me Alex,name:Alex,model,name:Alex,False,True
+You can call me dr strange,name:Dr Strange,model,name:Dr Strange,False,True
+My name is Mary-Jane O'Neil,name:Mary-Jane O'Neil,name:My name is Mary-Jane O'Neil,name:Mary-Jane O'Neil,False,True
+"hello, my name is Wei",name:Wei,name:Wei,name:Wei,True,True
+my name is Inigo Montoya,name:Inigo Montoya,name:Inigo Montoya,name:Inigo Montoya,True,True
+My name is Sam!,name:Sam,name:My name is Sam!,name:Sam,False,True
+i'm called Zoe,name:Zoe,model,name:Zoe,False,True
+My name is Rahul.,name:Rahul,name:My name is Rahul.,name:Rahul,False,True
+my name is lee,name:Lee,name:lee,name:Lee,False,True
+My name is not important,model,name:My name is not important,model,False,True
+Why do people say my name is in interviews?,model,name:in interviews?,model,False,True
+my name is,model,name:,model,False,True
+my name is 12345,model,name:12345,model,False,True
+call me when you can,model,model,model,True,True
+Call me maybe lyrics,model,model,model,True,True
+What does 'my name is' mean in Spanish?,model,name:' mean in Spanish?,model,False,True
+My name is Sam. What's the capital of France?,name+model:Sam,name:My name is Sam. What's the capital of France?,name+model:Sam,False,True
+"my name is Priya, can you explain recursion?",name+model:Priya,"name:Priya, can you explain recursion?",name+model:Priya,False,True
+"Hi, my name is Alex and I need help with Python",name+model:Alex,name:Alex and I need help with Python,name+model:Alex,False,True
+My name is Rahul. Tell me a joke,name+model:Rahul,name:My name is Rahul. Tell me a joke,name+model:Rahul,False,True
+"my name is Zoe, what's 12 times 12?",name+model:Zoe,"name:Zoe, what's 12 times 12?",name+model:Zoe,False,True
+My name is Wei. Summarise the French Revolution,name+model:Wei,name:My name is Wei. Summarise the French Revolution,name+model:Wei,False,True
+Tell me a joke,model,model,model,True,True
+What is the capital of France?,model,model,model,True,True
+Explain recursion simply,model,model,model,True,True
+Write a haiku about autumn,model,model,model,True,True
+How do I reverse a list in Python?,model,model,model,True,True
+Give me three tips to study better,model,model,model,True,True
+Translate 'good morning' into Spanish,model,model,model,True,True
+Who wrote Pride and Prejudice?,model,model,model,True,True
+What is 15% of 240?,model,model,model,True,True
+Suggest a name for my dog,model,model,model,True,True
+What's the difference between TCP and UDP?,model,model,model,True,True
+Summarise the plot of Hamlet,model,model,model,True,True
+Hello there,model,model,model,True,True
+Thanks!,model,model,model,True,True
+How many days are there in a leap year?,model,model,model,True,True
+Is Python or JavaScript better for beginners?,model,model,model,True,True
