@@ -4,6 +4,7 @@ Messages are sent as the whole conversation each time (the server keeps each vis
 shared between visitors. Nothing from the API's error messages reaches the page.
 """
 import logging
+import time
 
 log = logging.getLogger("chatbot")
 
@@ -32,6 +33,7 @@ MESSAGES = {
     "server": "The model service is having trouble. Please try again shortly.",
     "other": "Something went wrong while answering. Please try again.",
     "empty": "I didn't get an answer from the model. Please try rephrasing.",
+    "timeout": "The model took too long to answer. Please try again, or ask something shorter.",
 }
 
 
@@ -39,6 +41,8 @@ def classify(error):
     """The MESSAGES key for an exception raised by the SDK."""
     code = getattr(error, "code", None)
     text = str(error).lower()
+    if "timeout" in type(error).__name__.lower() or "timed out" in text:
+        return "timeout"
     if code == 429:
         return "busy"
     if code in (401, 403) or "api key" in text and code == 400:
@@ -50,9 +54,18 @@ def classify(error):
     return "other"
 
 
+def thinking_config(types, model):
+    """Less hidden 'thinking' means the first word arrives sooner. Only set for model families that support it."""
+    if model.startswith("gemini-3"):
+        return types.ThinkingConfig(thinking_level="LOW")
+    if model.startswith("gemini-2.5-flash") and "lite" not in model:
+        return types.ThinkingConfig(thinking_budget=0)
+    return None
+
+
 class GeminiChat:
-    def __init__(self, api_key, model, max_output_tokens=1024, client=None, fallbacks=None):
-        self.model, self.max_output_tokens = model, max_output_tokens
+    def __init__(self, api_key, model, max_output_tokens=1024, client=None, fallbacks=None, timeout_seconds=45):
+        self.model, self.max_output_tokens, self.timeout_seconds = model, max_output_tokens, timeout_seconds
         self.fallbacks = FALLBACK_MODELS if fallbacks is None else fallbacks
         self._client, self._api_key = client, api_key
 
@@ -60,7 +73,9 @@ class GeminiChat:
     def client(self):
         if self._client is None:
             from google import genai
-            self._client = genai.Client(api_key=self._api_key)
+            from google.genai import types
+            self._client = genai.Client(api_key=self._api_key,
+                                        http_options=types.HttpOptions(timeout=int(self.timeout_seconds * 1000)))      # milliseconds
         return self._client
 
     def stream(self, history, message, name=None):
@@ -72,14 +87,21 @@ class GeminiChat:
         from google.genai import types
         contents = [types.Content(role=role, parts=[types.Part(text=text)]) for role, text in [*history, ("user", message)]]
         instruction = SYSTEM_PROMPT + (f" The user's name is {name}." if name else "")
-        config = types.GenerateContentConfig(system_instruction=instruction, max_output_tokens=self.max_output_tokens)
         candidates = [self.model] + [m for m in self.fallbacks if m != self.model]
-        for position, model in enumerate(candidates):
+        position = 0
+        use_thinking = True
+        started = time.time()
+        while position < len(candidates):
+            model = candidates[position]
+            config = types.GenerateContentConfig(system_instruction=instruction, max_output_tokens=self.max_output_tokens,
+                                                 thinking_config=thinking_config(types, model) if use_thinking else None)
             produced, blocked = False, False
             try:
                 for chunk in self.client.models.generate_content_stream(model=model, contents=contents, config=config):
                     text = _chunk_text(chunk)
                     if text:
+                        if not produced:
+                            log.info("%s: first words after %.1fs", model, time.time() - started)
                         produced = True
                         yield text
                     blocked = blocked or _was_blocked(chunk)
@@ -87,12 +109,17 @@ class GeminiChat:
                 raise
             except Exception as e:                       # the SDK raises its own error types; map them all
                 kind = classify(e)
-                log.warning("Gemini call with %s failed (%s): %s", model, kind, type(e).__name__)
+                log.warning("Gemini call with %s failed after %.1fs (%s): %s", model, time.time() - started, kind, type(e).__name__)
+                if not produced and use_thinking and getattr(e, "code", None) == 400 and "thinking" in str(e).lower():
+                    use_thinking = False                 # this model rejected the thinking setting: ask again without it
+                    continue
                 if kind == "model" and not produced and position + 1 < len(candidates):
-                    continue                             # this model name is not available to the key: try the next one
+                    position += 1                        # this model name is not available to the key: try the next one
+                    continue
                 raise ChatError(MESSAGES[kind]) from None
             if not produced:
                 raise ChatError(MESSAGES["blocked" if blocked else "empty"])
+            log.info("%s: answered in %.1fs", model, time.time() - started)
             if model != self.model:
                 log.warning("Using %s instead of %s", model, self.model)
                 self.model = model

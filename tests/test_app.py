@@ -25,7 +25,9 @@ def make(llm=None, **settings):
 
 def say(client, message, tz=None, **kw):
     r = client.post("/chat", json={"message": message, "tz": tz}, **kw)
-    return r, ([json.loads(x) for x in r.get_data(as_text=True).splitlines()] if r.mimetype == "application/x-ndjson" else r.get_json())
+    if r.mimetype != "application/x-ndjson":
+        return r, r.get_json()
+    return r, [x for x in (json.loads(l) for l in r.get_data(as_text=True).splitlines()) if "start" not in x]
 
 
 def text(lines):
@@ -166,3 +168,14 @@ def test_settings_read_the_key_from_either_variable_and_ignore_placeholders(valu
 def test_settings_have_sensible_defaults_and_ignore_bad_numbers():
     s = Settings.from_env({"QUESTIONS_PER_SESSION": "abc", "MODEL_CALLS_PER_DAY": "-5"})
     assert s.model == "gemini-3.8-flash" and s.questions_per_session == 30 and s.model_calls_per_day == 1
+
+
+def test_a_model_reply_starts_with_an_immediate_line_so_the_page_is_never_left_waiting_for_headers():
+    client, _ = make()
+    r = client.post("/chat", json={"message": "hi"})
+    first = json.loads(r.get_data(as_text=True).splitlines()[0])
+    assert first == {"start": True}
+
+
+def test_the_model_timeout_is_a_setting():
+    assert Settings.from_env({}).model_timeout_seconds == 45 and Settings.from_env({"MODEL_TIMEOUT_SECONDS": "20"}).model_timeout_seconds == 20

@@ -30,6 +30,7 @@ body::before { content:""; position:fixed; inset:0 0 auto 0; height:360px; z-ind
 .bubble code { font:.88em ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; background:var(--soft); padding:1px 6px; border-radius:6px; }
 .bubble pre { margin:0 0 .7em; padding:12px 14px; background:var(--code); color:#e6edf7; border-radius:10px; overflow-x:auto; } .bubble pre code { background:none; padding:0; color:inherit; font-size:.86rem; }
 .bubble a { color:var(--brand); }
+.slow { margin-top:6px; color:var(--muted); font-size:.85rem; }
 .dots { display:inline-flex; gap:5px; padding:6px 0; } .dots i { width:8px; height:8px; border-radius:50%; background:var(--muted); animation:blink 1.2s infinite ease-in-out; } .dots i:nth-child(2) { animation-delay:.2s; } .dots i:nth-child(3) { animation-delay:.4s; }
 @keyframes blink { 0%,100% { opacity:.25; } 50% { opacity:1; } }
 .composer { padding:8px 0 14px; } .box { display:flex; align-items:flex-end; gap:8px; background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:8px 8px 8px 16px; box-shadow:0 4px 18px rgba(16,24,40,.08); }

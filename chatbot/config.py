@@ -20,6 +20,7 @@ class Settings:
     max_input_chars: int = 2000
     max_history_messages: int = 24
     max_output_tokens: int = 1024
+    model_timeout_seconds: int = 45          # give up on a model call that has not finished by then
     session_ttl_seconds: int = 2 * 60 * 60
     max_sessions: int = 2000
 
@@ -39,6 +40,7 @@ class Settings:
             max_input_chars=_int(env, "MAX_INPUT_CHARS", d.max_input_chars),
             max_history_messages=_int(env, "MAX_HISTORY_MESSAGES", d.max_history_messages),
             max_output_tokens=_int(env, "MAX_OUTPUT_TOKENS", d.max_output_tokens),
+            model_timeout_seconds=_int(env, "MODEL_TIMEOUT_SECONDS", d.model_timeout_seconds),
             session_ttl_seconds=_int(env, "SESSION_TTL_SECONDS", d.session_ttl_seconds),
             max_sessions=_int(env, "MAX_SESSIONS", d.max_sessions),
         )

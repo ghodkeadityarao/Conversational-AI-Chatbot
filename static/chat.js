@@ -75,9 +75,14 @@
     const bubble = addRow("bot", "", false);
     bubble.innerHTML = '<span class="dots"><i></i><i></i><i></i></span>';
     let reply = "", failed = false;
+    const controller = new AbortController();
+    const giveUp = setTimeout(() => controller.abort(), 90000);
+    const note = document.createElement("div");
+    note.className = "slow";
+    const slowTimer = setTimeout(() => { note.textContent = "Still thinking... this is taking longer than usual."; bubble.appendChild(note); }, 8000);
     try {
       const response = await fetch("/chat", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal,
         body: JSON.stringify({ message, tz: Intl.DateTimeFormat().resolvedOptions().timeZone }),
       });
       if (!response.ok) {
@@ -97,7 +102,7 @@
           let newline;
           while ((newline = buffer.indexOf("\n")) >= 0) {
             const item = JSON.parse(buffer.slice(0, newline)); buffer = buffer.slice(newline + 1);
-            if (item.t) { reply += item.t; bubble.innerHTML = render(reply); chat.scrollTop = chat.scrollHeight; }
+            if (item.t) { clearTimeout(slowTimer); reply += item.t; bubble.innerHTML = render(reply); chat.scrollTop = chat.scrollHeight; }
             if (item.error) { failed = true; bubble.parentElement.remove(); addRow("error", item.error, false); }
             if (typeof item.remaining === "number") setLeft(item.remaining);
           }
@@ -106,8 +111,9 @@
       }
     } catch (e) {
       bubble.parentElement.remove();
-      addRow("error", "Could not reach the server. Check your connection and try again.", false);
+      addRow("error", e.name === "AbortError" ? "That took too long, so I stopped waiting. Please try again." : "Could not reach the server. Check your connection and try again.", false);
     } finally {
+      clearTimeout(giveUp); clearTimeout(slowTimer);
       setBusy(false);
     }
   }

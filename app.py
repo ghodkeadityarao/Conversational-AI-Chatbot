@@ -6,6 +6,7 @@ Each visitor has their own conversation (a random id in a cookie). Nothing is wr
 Keep it to one worker process: conversations and limits live in that process's memory.
 """
 import json
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -17,6 +18,7 @@ from chatbot.llm import ChatError, GeminiChat, NoModel
 from chatbot.sessions import Limits, SessionStore
 
 load_dotenv()
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
 def line(**payload):
@@ -26,7 +28,7 @@ def line(**payload):
 def create_app(settings=None, llm=None, clock=None):
     settings = settings or Settings.from_env()
     if llm is None:
-        llm = GeminiChat(settings.api_key, settings.model, settings.max_output_tokens) if settings.api_key else NoModel()
+        llm = GeminiChat(settings.api_key, settings.model, settings.max_output_tokens, timeout_seconds=settings.model_timeout_seconds) if settings.api_key else NoModel()
     store = SessionStore(settings.session_ttl_seconds, settings.max_sessions, **({"clock": clock} if clock else {}))
     limits = Limits(settings.requests_per_minute, settings.model_calls_per_day, **({"clock": clock} if clock else {}))
 
@@ -105,6 +107,7 @@ def create_app(settings=None, llm=None, clock=None):
 
         def generate():
             parts = []
+            yield line(start=True)                                                # sends the headers now, not after the first word
             try:
                 for piece in llm.stream(history, message, session.name):
                     parts.append(piece)
