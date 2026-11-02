@@ -11,13 +11,13 @@ A Flask chat app. Simple questions (the time, the date, weather requests, your n
   - weather requests, answered honestly as "I don't have live weather data";
   - remembering a name from "My name is ...", "Call me ..." and similar, in any capitalisation, and answering "What's my name?";
   - questions that only mention these words ("What time did the Roman Empire fall?", "How do weather balloons work?") go to the model.
-- **The current Gemini SDK:** the `google-genai` package, with the model chosen by a setting (`gemini-3.8-flash` by default, and if Google reports that a model name is not available to the key, the app tries `gemini-3.6-flash`, `gemini-2.5-flash` and two lighter models and keeps the first that works) and a system prompt that tells the model it cannot see the time or the weather.
+- **The current Gemini SDK:** the `google-genai` package, with the model chosen by a setting (`gemini-3.5-flash-lite` by default for quick answers, and if Google reports that a model name is not available to the key, the app tries `gemini-3.8-flash`, `gemini-3.6-flash` and two 2.5 models and keeps the first that works) and a system prompt that tells the model it cannot see the time or the weather.
 - **Protection for the API key:**
   - a limit of 30 model questions per visitor session (new chat does not reset it);
   - 15 messages per minute per network address;
   - a shared daily budget of 1,000 model calls;
   - quick answers cost nothing against these limits, and a failed model call is not counted.
-- **No silent waiting:** the server answers immediately, the page shows "Still thinking..." after 8 seconds, a model call that has not finished in 45 seconds is cancelled with a clear message, and the model is asked for short hidden "thinking" so the first words arrive sooner. The server log records which model answered and how long the first words took.
+- **No silent waiting:** the server answers immediately, the page shows "Still thinking..." after 8 seconds, a model call that has not finished in 90 seconds is cancelled with a clear message, and an answer that stops part-way keeps the text already shown, and the model is asked for short hidden "thinking" so the first words arrive sooner. The server log records which model answered and how long the first words took.
 - **Plain-language errors:** a busy model, a blocked request, a bad key or a missing model each get a clear message; raw error text from Google never reaches the page.
 - **Safe by construction:** replies are escaped before display, the page loads no inline scripts or styles (enforced by a content security policy), message length and body size are capped, and no secret is kept in the repository.
 - **Works without a key:** the quick answers still work and chat explains that the model is not set up.
@@ -29,10 +29,10 @@ Set as environment variables (or in a local `.env`, which git ignores; `.env.exa
 | Variable | Meaning | Default |
 |---|---|---|
 | `GEMINI_API_KEY` | Google AI Studio key (`GOOGLE_API_KEY` also works) | none |
-| `GEMINI_MODEL` | model name | `gemini-3.8-flash` |
+| `GEMINI_MODEL` | model name | `gemini-3.5-flash-lite` |
 | `QUESTIONS_PER_SESSION`, `REQUESTS_PER_MINUTE`, `MODEL_CALLS_PER_DAY` | the limits above | 30, 15, 1000 |
 | `MAX_INPUT_CHARS`, `MAX_HISTORY_MESSAGES`, `MAX_OUTPUT_TOKENS` | message length, remembered messages, reply length | 2000, 24, 1024 |
-| `MODEL_TIMEOUT_SECONDS` | how long to wait for the model before giving up with a clear message | 45 |
+| `MODEL_TIMEOUT_SECONDS` | how long to wait for the model before giving up with a clear message | 90 |
 | `TRUST_PROXY` | set to 1 behind a proxy so each visitor's own address is used for the rate limit | off |
 
 ## Results
@@ -72,4 +72,4 @@ The original matched words anywhere, so "What time did the Roman Empire fall?" r
 | `chatbot/config.py` | Settings from environment variables |
 | `templates/`, `static/` | Chat page, styles and script |
 | `evaluation/` | The labelled messages, the original rules, and the comparison with its results |
-| `tests/` | 103 tests: quick answers, sessions and limits, the Gemini wrapper (with a fake client), and the app end to end |
+| `tests/` | 105 tests: quick answers, sessions and limits, the Gemini wrapper (with a fake client), and the app end to end |

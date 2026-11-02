@@ -103,7 +103,15 @@
           while ((newline = buffer.indexOf("\n")) >= 0) {
             const item = JSON.parse(buffer.slice(0, newline)); buffer = buffer.slice(newline + 1);
             if (item.t) { clearTimeout(slowTimer); reply += item.t; bubble.innerHTML = render(reply); chat.scrollTop = chat.scrollHeight; }
-            if (item.error) { failed = true; bubble.parentElement.remove(); addRow("error", item.error, false); }
+            if (item.error) {
+              failed = true;
+              if (reply) {                                       // keep what was written and say it stopped
+                clearTimeout(slowTimer); note.remove();
+                const cut = document.createElement("div");
+                cut.className = "cut"; cut.textContent = item.error;
+                bubble.appendChild(cut);
+              } else { bubble.parentElement.remove(); addRow("error", item.error, false); }
+            }
             if (typeof item.remaining === "number") setLeft(item.remaining);
           }
         }

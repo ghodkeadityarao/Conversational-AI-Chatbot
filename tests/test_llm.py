@@ -155,3 +155,7 @@ def test_the_thinking_setting_is_sent_and_dropped_if_the_model_rejects_it():
     c.models = Rejecting()
     assert list(llm.GeminiChat("k", "gemini-3.8-flash", 64, c).stream([], "hi")) == ["fine"]
     assert seen[0] is not None and seen[1] is None
+
+
+def test_the_log_message_for_an_error_never_contains_a_key():
+    assert "AIza" not in llm._safe(ApiError(400, "bad key AIzaSyA1234567890abcdefghijklmnopqrstu in request"))

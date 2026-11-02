@@ -8,14 +8,16 @@ from chatbot.llm import ChatError
 
 
 class FakeLLM:
-    def __init__(self, pieces=("Hello", " there"), error=None):
-        self.pieces, self.error, self.calls = pieces, error, []
+    def __init__(self, pieces=("Hello", " there"), error=None, error_after_pieces=False):
+        self.pieces, self.error, self.error_after_pieces, self.calls = pieces, error, error_after_pieces, []
 
     def stream(self, history, message, name=None):
         self.calls.append((list(history), message, name))
-        if self.error:
+        if self.error and not self.error_after_pieces:
             raise ChatError(self.error)
         yield from self.pieces
+        if self.error:
+            raise ChatError(self.error)
 
 
 def make(llm=None, **settings):
@@ -123,7 +125,7 @@ def test_too_many_requests_from_one_address_get_a_retry_after():
 def test_a_failed_model_call_shows_a_plain_error_and_costs_nothing():
     client, _ = make(FakeLLM(error="The model is busy."), questions_per_session=3)
     r, lines = say(client, "hi")
-    assert lines == [{"error": "The model is busy."}]
+    assert lines == [{"error": "The model is busy.", "cut": False}]
     _, lines = say(client, "what time is it")
     assert lines[-1]["remaining"] == 3
 
@@ -167,7 +169,7 @@ def test_settings_read_the_key_from_either_variable_and_ignore_placeholders(valu
 
 def test_settings_have_sensible_defaults_and_ignore_bad_numbers():
     s = Settings.from_env({"QUESTIONS_PER_SESSION": "abc", "MODEL_CALLS_PER_DAY": "-5"})
-    assert s.model == "gemini-3.8-flash" and s.questions_per_session == 30 and s.model_calls_per_day == 1
+    assert s.model == "gemini-3.5-flash-lite" and s.questions_per_session == 30 and s.model_calls_per_day == 1
 
 
 def test_a_model_reply_starts_with_an_immediate_line_so_the_page_is_never_left_waiting_for_headers():
@@ -178,4 +180,12 @@ def test_a_model_reply_starts_with_an_immediate_line_so_the_page_is_never_left_w
 
 
 def test_the_model_timeout_is_a_setting():
-    assert Settings.from_env({}).model_timeout_seconds == 45 and Settings.from_env({"MODEL_TIMEOUT_SECONDS": "20"}).model_timeout_seconds == 20
+    assert Settings.from_env({}).model_timeout_seconds == 90 and Settings.from_env({"MODEL_TIMEOUT_SECONDS": "20"}).model_timeout_seconds == 20
+
+
+def test_a_reply_cut_off_part_way_keeps_its_text_marks_the_error_and_still_counts_as_a_question():
+    client, llm = make(FakeLLM(error="The model took too long to answer.", error_after_pieces=True), questions_per_session=3)
+    r, lines = say(client, "hi")
+    assert text(lines) == "Hello there" and lines[-1] == {"error": "The model took too long to answer.", "cut": True}
+    _, lines = say(client, "what time is it")
+    assert lines[-1]["remaining"] == 2 and llm.calls[-1][1] == "hi"

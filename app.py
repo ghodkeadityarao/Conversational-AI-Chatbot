@@ -113,9 +113,10 @@ def create_app(settings=None, llm=None, clock=None):
                     parts.append(piece)
                     yield line(t=piece)
             except ChatError as e:
-                session.questions -= 1                                        # a failed attempt does not use a question
-                limits.give_back_model_call()
-                yield line(error=str(e))
+                if not parts:                                                 # nothing was shown: it does not use a question
+                    session.questions -= 1
+                    limits.give_back_model_call()
+                yield line(error=str(e), cut=bool(parts))
                 return
             session.add(message, "".join(parts), settings.max_history_messages)
             yield line(done=True, remaining=remaining(session))

@@ -16,7 +16,7 @@ SYSTEM_PROMPT = (
 
 
 # Tried in order (after the configured model) when Google reports that a model name is not found.
-FALLBACK_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-2.5-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash-lite"]
+FALLBACK_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-2.5-flash-lite", "gemini-2.5-flash"]
 
 
 class ChatError(Exception):
@@ -64,7 +64,7 @@ def thinking_config(types, model):
 
 
 class GeminiChat:
-    def __init__(self, api_key, model, max_output_tokens=1024, client=None, fallbacks=None, timeout_seconds=45):
+    def __init__(self, api_key, model, max_output_tokens=1024, client=None, fallbacks=None, timeout_seconds=90):
         self.model, self.max_output_tokens, self.timeout_seconds = model, max_output_tokens, timeout_seconds
         self.fallbacks = FALLBACK_MODELS if fallbacks is None else fallbacks
         self._client, self._api_key = client, api_key
@@ -95,7 +95,7 @@ class GeminiChat:
             model = candidates[position]
             config = types.GenerateContentConfig(system_instruction=instruction, max_output_tokens=self.max_output_tokens,
                                                  thinking_config=thinking_config(types, model) if use_thinking else None)
-            produced, blocked = False, False
+            produced, blocked, sent = False, False, []
             try:
                 for chunk in self.client.models.generate_content_stream(model=model, contents=contents, config=config):
                     text = _chunk_text(chunk)
@@ -103,13 +103,15 @@ class GeminiChat:
                         if not produced:
                             log.info("%s: first words after %.1fs", model, time.time() - started)
                         produced = True
+                        sent.append(text)
                         yield text
                     blocked = blocked or _was_blocked(chunk)
             except ChatError:
                 raise
             except Exception as e:                       # the SDK raises its own error types; map them all
                 kind = classify(e)
-                log.warning("Gemini call with %s failed after %.1fs (%s): %s", model, time.time() - started, kind, type(e).__name__)
+                log.warning("Gemini call with %s failed after %.1fs (%s, %s, code %s, %d characters already sent): %s", model,
+                            time.time() - started, kind, type(e).__name__, getattr(e, "code", None), sum(map(len, sent)), _safe(e))
                 if not produced and use_thinking and getattr(e, "code", None) == 400 and "thinking" in str(e).lower():
                     use_thinking = False                 # this model rejected the thinking setting: ask again without it
                     continue
@@ -124,6 +126,12 @@ class GeminiChat:
                 log.warning("Using %s instead of %s", model, self.model)
                 self.model = model
             return
+
+
+def _safe(error):
+    """The start of an error message for the server log, with anything that looks like a key removed."""
+    import re
+    return re.sub(r"AIza[0-9A-Za-z_\-]{20,}", "[key]", str(error))[:300]
 
 
 def _chunk_text(chunk):
