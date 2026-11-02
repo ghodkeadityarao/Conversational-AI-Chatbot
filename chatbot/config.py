@@ -19,7 +19,7 @@ class Settings:
     model_calls_per_day: int = 1000          # all visitors together, to protect the API quota
     max_input_chars: int = 2000
     max_history_messages: int = 24
-    max_output_tokens: int = 1024
+    max_output_tokens: int = 4096
     model_timeout_seconds: int = 90          # give up on a model call that has not finished by then
     session_ttl_seconds: int = 2 * 60 * 60
     max_sessions: int = 2000

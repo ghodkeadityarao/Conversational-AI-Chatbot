@@ -17,7 +17,7 @@ A Flask chat app. Simple questions (the time, the date, weather requests, your n
   - 15 messages per minute per network address;
   - a shared daily budget of 1,000 model calls;
   - quick answers cost nothing against these limits, and a failed model call is not counted.
-- **No silent waiting:** the server answers immediately, the page shows "Still thinking..." after 8 seconds, a model call that has not finished in 90 seconds is cancelled with a clear message, and an answer that stops part-way keeps the text already shown, and the model is asked for short hidden "thinking" so the first words arrive sooner. The server log records which model answered and how long the first words took.
+- **No silent waiting:** the server answers immediately, the page shows "Still thinking..." after 8 seconds, a model call that has not finished in 90 seconds is cancelled with a clear message, an answer that stops part-way keeps the text already shown, and a reply that hits the length limit says so and offers a Continue button, and the model is asked for short hidden "thinking" so the first words arrive sooner. The server log records which model answered and how long the first words took.
 - **Plain-language errors:** a busy model, a blocked request, a bad key or a missing model each get a clear message; raw error text from Google never reaches the page.
 - **Safe by construction:** replies are escaped before display, the page loads no inline scripts or styles (enforced by a content security policy), message length and body size are capped, and no secret is kept in the repository.
 - **Works without a key:** the quick answers still work and chat explains that the model is not set up.
@@ -31,7 +31,7 @@ Set as environment variables (or in a local `.env`, which git ignores; `.env.exa
 | `GEMINI_API_KEY` | Google AI Studio key (`GOOGLE_API_KEY` also works) | none |
 | `GEMINI_MODEL` | model name | `gemini-3.5-flash-lite` |
 | `QUESTIONS_PER_SESSION`, `REQUESTS_PER_MINUTE`, `MODEL_CALLS_PER_DAY` | the limits above | 30, 15, 1000 |
-| `MAX_INPUT_CHARS`, `MAX_HISTORY_MESSAGES`, `MAX_OUTPUT_TOKENS` | message length, remembered messages, reply length | 2000, 24, 1024 |
+| `MAX_INPUT_CHARS`, `MAX_HISTORY_MESSAGES`, `MAX_OUTPUT_TOKENS` | message length, remembered messages, reply length | 2000, 24, 4096 |
 | `MODEL_TIMEOUT_SECONDS` | how long to wait for the model before giving up with a clear message | 90 |
 | `TRUST_PROXY` | set to 1 behind a proxy so each visitor's own address is used for the rate limit | off |
 
@@ -72,4 +72,4 @@ The original matched words anywhere, so "What time did the Roman Empire fall?" r
 | `chatbot/config.py` | Settings from environment variables |
 | `templates/`, `static/` | Chat page, styles and script |
 | `evaluation/` | The labelled messages, the original rules, and the comparison with its results |
-| `tests/` | 105 tests: quick answers, sessions and limits, the Gemini wrapper (with a fake client), and the app end to end |
+| `tests/` | 108 tests: quick answers, sessions and limits, the Gemini wrapper (with a fake client), and the app end to end |

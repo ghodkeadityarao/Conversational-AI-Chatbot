@@ -14,7 +14,7 @@ from flask import Flask, Response, jsonify, render_template, request
 
 from chatbot import intents
 from chatbot.config import Settings
-from chatbot.llm import ChatError, GeminiChat, NoModel
+from chatbot.llm import ChatError, Cut, GeminiChat, NoModel
 from chatbot.sessions import Limits, SessionStore
 
 load_dotenv()
@@ -106,10 +106,13 @@ def create_app(settings=None, llm=None, clock=None):
         history = list(session.history)
 
         def generate():
-            parts = []
+            parts, truncated = [], False
             yield line(start=True)                                                # sends the headers now, not after the first word
             try:
                 for piece in llm.stream(history, message, session.name):
+                    if isinstance(piece, Cut):
+                        truncated = True
+                        continue
                     parts.append(piece)
                     yield line(t=piece)
             except ChatError as e:
@@ -119,7 +122,7 @@ def create_app(settings=None, llm=None, clock=None):
                 yield line(error=str(e), cut=bool(parts))
                 return
             session.add(message, "".join(parts), settings.max_history_messages)
-            yield line(done=True, remaining=remaining(session))
+            yield line(done=True, remaining=remaining(session), truncated=truncated)
 
         return with_cookie(Response(generate(), mimetype="application/x-ndjson",
                                     headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"}), session)

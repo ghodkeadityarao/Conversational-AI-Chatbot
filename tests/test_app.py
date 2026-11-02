@@ -4,7 +4,7 @@ import pytest
 
 from app import create_app
 from chatbot.config import Settings
-from chatbot.llm import ChatError
+from chatbot.llm import ChatError, Cut
 
 
 class FakeLLM:
@@ -48,7 +48,7 @@ def test_a_reply_streams_as_json_lines_and_ends_with_the_questions_left():
     client, _ = make(questions_per_session=5)
     r, lines = say(client, "hi")
     assert r.mimetype == "application/x-ndjson" and [x.get("t") for x in lines[:2]] == ["Hello", " there"]
-    assert lines[-1] == {"done": True, "remaining": 4}
+    assert lines[-1] == {"done": True, "remaining": 4, "truncated": False}
 
 
 def test_each_visitor_has_a_private_conversation():
@@ -189,3 +189,17 @@ def test_a_reply_cut_off_part_way_keeps_its_text_marks_the_error_and_still_count
     assert text(lines) == "Hello there" and lines[-1] == {"error": "The model took too long to answer.", "cut": True}
     _, lines = say(client, "what time is it")
     assert lines[-1]["remaining"] == 2 and llm.calls[-1][1] == "hi"
+
+
+def test_a_reply_stopped_by_the_length_limit_is_reported_and_kept_in_the_history():
+    client, llm = make(FakeLLM(pieces=("A long answer that was ", "cut off", Cut())))
+    _, lines = say(client, "tell me everything")
+    assert text(lines) == "A long answer that was cut off" and lines[-1]["truncated"] is True
+    say(client, "continue")
+    assert llm.calls[-1][0][-1] == ("model", "A long answer that was cut off")
+
+
+def test_a_complete_reply_is_not_marked_as_cut():
+    client, _ = make()
+    _, lines = say(client, "hi")
+    assert lines[-1]["truncated"] is False

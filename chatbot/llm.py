@@ -9,7 +9,8 @@ import time
 log = logging.getLogger("chatbot")
 
 SYSTEM_PROMPT = (
-    "You are a friendly, concise assistant in a web chat. Answer clearly and directly, in the language the user writes in. "
+    "You are a friendly assistant in a web chat. Give complete answers: short for simple questions, thorough with all the steps or items "
+    "when the user asks for an explanation, a list or how to do something, and always finish what you start. Reply in the language the user writes in. "
     "Use Markdown sparingly: short lists and code blocks when they help. If you are not sure of something, say so instead of "
     "guessing. You cannot see the current time, date or weather and have no internet access, so do not claim to know them."
 )
@@ -17,6 +18,10 @@ SYSTEM_PROMPT = (
 
 # Tried in order (after the configured model) when Google reports that a model name is not found.
 FALLBACK_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-2.5-flash-lite", "gemini-2.5-flash"]
+
+
+class Cut:
+    """Yielded after the last piece when the model stopped because it reached the reply length limit."""
 
 
 class ChatError(Exception):
@@ -95,7 +100,7 @@ class GeminiChat:
             model = candidates[position]
             config = types.GenerateContentConfig(system_instruction=instruction, max_output_tokens=self.max_output_tokens,
                                                  thinking_config=thinking_config(types, model) if use_thinking else None)
-            produced, blocked, sent = False, False, []
+            produced, blocked, sent, hit_limit = False, False, [], False
             try:
                 for chunk in self.client.models.generate_content_stream(model=model, contents=contents, config=config):
                     text = _chunk_text(chunk)
@@ -106,6 +111,7 @@ class GeminiChat:
                         sent.append(text)
                         yield text
                     blocked = blocked or _was_blocked(chunk)
+                    hit_limit = hit_limit or _finish_reason(chunk) == "MAX_TOKENS"
             except ChatError:
                 raise
             except Exception as e:                       # the SDK raises its own error types; map them all
@@ -121,7 +127,9 @@ class GeminiChat:
                 raise ChatError(MESSAGES[kind]) from None
             if not produced:
                 raise ChatError(MESSAGES["blocked" if blocked else "empty"])
-            log.info("%s: answered in %.1fs", model, time.time() - started)
+            log.info("%s: answered in %.1fs%s", model, time.time() - started, " (stopped at the length limit)" if hit_limit else "")
+            if hit_limit:
+                yield Cut()
             if model != self.model:
                 log.warning("Using %s instead of %s", model, self.model)
                 self.model = model
@@ -139,6 +147,14 @@ def _chunk_text(chunk):
         return chunk.text or ""
     except Exception:                                    # a blocked chunk can raise when its text is read
         return ""
+
+
+def _finish_reason(chunk):
+    for candidate in getattr(chunk, "candidates", None) or []:
+        reason = getattr(candidate, "finish_reason", None)
+        if reason is not None:
+            return getattr(reason, "name", str(reason))
+    return None
 
 
 def _was_blocked(chunk):

@@ -159,3 +159,9 @@ def test_the_thinking_setting_is_sent_and_dropped_if_the_model_rejects_it():
 
 def test_the_log_message_for_an_error_never_contains_a_key():
     assert "AIza" not in llm._safe(ApiError(400, "bad key AIzaSyA1234567890abcdefghijklmnopqrstu in request"))
+
+
+def test_a_reply_that_stops_at_the_length_limit_is_flagged_after_its_last_piece():
+    out = run(FakeClient(chunks=[Chunk("Part one "), Chunk("and two", reason="MAX_TOKENS")]))
+    assert out[:2] == ["Part one ", "and two"] and isinstance(out[2], llm.Cut) and len(out) == 3
+    assert not any(isinstance(x, llm.Cut) for x in run(FakeClient(chunks=[Chunk("whole", reason="STOP")])))

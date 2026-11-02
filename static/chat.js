@@ -113,6 +113,16 @@
               } else { bubble.parentElement.remove(); addRow("error", item.error, false); }
             }
             if (typeof item.remaining === "number") setLeft(item.remaining);
+            if (item.truncated) {
+              const cut = document.createElement("div");
+              cut.className = "cut";
+              cut.textContent = "This reply stopped because it reached the length limit. ";
+              const more = document.createElement("button");
+              more.type = "button"; more.className = "more"; more.textContent = "Continue";
+              more.addEventListener("click", () => { more.remove(); ask("Please continue from exactly where you stopped."); });
+              cut.appendChild(more);
+              bubble.appendChild(cut);
+            }
           }
         }
         if (!failed && !reply) { bubble.parentElement.remove(); addRow("error", "I didn't get an answer. Please try again.", false); }
