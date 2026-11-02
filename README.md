@@ -1,5 +1,7 @@
 # Conversational AI Chatbot
 
+Live App: https://conv-ai-chatbot.onrender.com
+
 A Flask chat app. Simple questions (the time, the date, weather requests, your name) are answered instantly on the server; everything else goes to Google's Gemini model, and the reply streams into the page as it is written.
 
 ## What it has
