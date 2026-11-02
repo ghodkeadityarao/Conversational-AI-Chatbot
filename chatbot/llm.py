@@ -14,6 +14,10 @@ SYSTEM_PROMPT = (
 )
 
 
+# Tried in order (after the configured model) when Google reports that a model name is not found.
+FALLBACK_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-2.5-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash-lite"]
+
+
 class ChatError(Exception):
     """A failure with a message that is safe and useful to show the visitor."""
 
@@ -47,8 +51,9 @@ def classify(error):
 
 
 class GeminiChat:
-    def __init__(self, api_key, model, max_output_tokens=1024, client=None):
+    def __init__(self, api_key, model, max_output_tokens=1024, client=None, fallbacks=None):
         self.model, self.max_output_tokens = model, max_output_tokens
+        self.fallbacks = FALLBACK_MODELS if fallbacks is None else fallbacks
         self._client, self._api_key = client, api_key
 
     @property
@@ -59,27 +64,39 @@ class GeminiChat:
         return self._client
 
     def stream(self, history, message, name=None):
-        """Yield the reply in pieces. `history` is [(role, text)] with role 'user' or 'model'."""
+        """Yield the reply in pieces. `history` is [(role, text)] with role 'user' or 'model'.
+
+        If Google says the model name does not exist (a 404), the next model in the fallback list is tried, and the
+        first one that works is kept for later messages.
+        """
         from google.genai import types
         contents = [types.Content(role=role, parts=[types.Part(text=text)]) for role, text in [*history, ("user", message)]]
         instruction = SYSTEM_PROMPT + (f" The user's name is {name}." if name else "")
         config = types.GenerateContentConfig(system_instruction=instruction, max_output_tokens=self.max_output_tokens)
-        produced, blocked = False, False
-        try:
-            for chunk in self.client.models.generate_content_stream(model=self.model, contents=contents, config=config):
-                text = _chunk_text(chunk)
-                if text:
-                    produced = True
-                    yield text
-                blocked = blocked or _was_blocked(chunk)
-        except ChatError:
-            raise
-        except Exception as e:                           # the SDK raises its own error types; map them all
-            kind = classify(e)
-            log.warning("Gemini call failed (%s): %s", kind, type(e).__name__)
-            raise ChatError(MESSAGES[kind]) from None
-        if not produced:
-            raise ChatError(MESSAGES["blocked" if blocked else "empty"])
+        candidates = [self.model] + [m for m in self.fallbacks if m != self.model]
+        for position, model in enumerate(candidates):
+            produced, blocked = False, False
+            try:
+                for chunk in self.client.models.generate_content_stream(model=model, contents=contents, config=config):
+                    text = _chunk_text(chunk)
+                    if text:
+                        produced = True
+                        yield text
+                    blocked = blocked or _was_blocked(chunk)
+            except ChatError:
+                raise
+            except Exception as e:                       # the SDK raises its own error types; map them all
+                kind = classify(e)
+                log.warning("Gemini call with %s failed (%s): %s", model, kind, type(e).__name__)
+                if kind == "model" and not produced and position + 1 < len(candidates):
+                    continue                             # this model name is not available to the key: try the next one
+                raise ChatError(MESSAGES[kind]) from None
+            if not produced:
+                raise ChatError(MESSAGES["blocked" if blocked else "empty"])
+            if model != self.model:
+                log.warning("Using %s instead of %s", model, self.model)
+                self.model = model
+            return
 
 
 def _chunk_text(chunk):

@@ -11,7 +11,7 @@ A Flask chat app. Simple questions (the time, the date, weather requests, your n
   - weather requests, answered honestly as "I don't have live weather data";
   - remembering a name from "My name is ...", "Call me ..." and similar, in any capitalisation, and answering "What's my name?";
   - questions that only mention these words ("What time did the Roman Empire fall?", "How do weather balloons work?") go to the model.
-- **The current Gemini SDK:** the `google-genai` package, with the model chosen by a setting (`gemini-2.5-flash` by default) and a system prompt that tells the model it cannot see the time or the weather.
+- **The current Gemini SDK:** the `google-genai` package, with the model chosen by a setting (`gemini-3.8-flash` by default, and if Google reports that a model name is not available to the key, the app tries `gemini-3.6-flash`, `gemini-2.5-flash` and two lighter models and keeps the first that works) and a system prompt that tells the model it cannot see the time or the weather.
 - **Protection for the API key:**
   - a limit of 30 model questions per visitor session (new chat does not reset it);
   - 15 messages per minute per network address;
@@ -28,7 +28,7 @@ Set as environment variables (or in a local `.env`, which git ignores; `.env.exa
 | Variable | Meaning | Default |
 |---|---|---|
 | `GEMINI_API_KEY` | Google AI Studio key (`GOOGLE_API_KEY` also works) | none |
-| `GEMINI_MODEL` | model name | `gemini-2.5-flash` |
+| `GEMINI_MODEL` | model name | `gemini-3.8-flash` |
 | `QUESTIONS_PER_SESSION`, `REQUESTS_PER_MINUTE`, `MODEL_CALLS_PER_DAY` | the limits above | 30, 15, 1000 |
 | `MAX_INPUT_CHARS`, `MAX_HISTORY_MESSAGES`, `MAX_OUTPUT_TOKENS` | message length, remembered messages, reply length | 2000, 24, 1024 |
 | `TRUST_PROXY` | set to 1 behind a proxy so each visitor's own address is used for the rate limit | off |
@@ -53,7 +53,7 @@ The original matched words anywhere, so "What time did the Roman Empire fall?" r
 ## Limits
 
 - **These numbers are in-sample.** The message set was written by the author of the new rules and the rules were tuned on messages of these kinds, so 99% is an upper bound, not a rate for real traffic.
-- **The live model was not tested.** There was no API key during development: the Gemini calls were checked against the installed SDK's signatures and tested with a fake client, so the first real request is the first real test. The default model's free-tier quota is not verified.
+- **The live model was not tested.** There was no API key during development: the Gemini calls were checked against the installed SDK's signatures and tested with a fake client, so the first real request is the first real test. Whether the default model, or any fallback, is available to a given key and its free-tier quota are not verified.
 - Conversations and limits live in one process's memory: run a single worker process, and a restart clears them.
 - The quick-answer rules understand English only, and the time uses the visitor's browser time zone (UTC if it is missing).
 - The Markdown display is deliberately small (no tables or images).
@@ -70,4 +70,4 @@ The original matched words anywhere, so "What time did the Roman Empire fall?" r
 | `chatbot/config.py` | Settings from environment variables |
 | `templates/`, `static/` | Chat page, styles and script |
 | `evaluation/` | The labelled messages, the original rules, and the comparison with its results |
-| `tests/` | 95 tests: quick answers, sessions and limits, the Gemini wrapper (with a fake client), and the app end to end |
+| `tests/` | 98 tests: quick answers, sessions and limits, the Gemini wrapper (with a fake client), and the app end to end |

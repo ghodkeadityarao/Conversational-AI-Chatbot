@@ -165,4 +165,4 @@ def test_settings_read_the_key_from_either_variable_and_ignore_placeholders(valu
 
 def test_settings_have_sensible_defaults_and_ignore_bad_numbers():
     s = Settings.from_env({"QUESTIONS_PER_SESSION": "abc", "MODEL_CALLS_PER_DAY": "-5"})
-    assert s.model == "gemini-2.5-flash" and s.questions_per_session == 30 and s.model_calls_per_day == 1
+    assert s.model == "gemini-3.8-flash" and s.questions_per_session == 30 and s.model_calls_per_day == 1

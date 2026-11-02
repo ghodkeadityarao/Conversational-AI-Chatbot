@@ -13,7 +13,7 @@ def _int(env, name, default):
 @dataclass(frozen=True)
 class Settings:
     api_key: str | None = None
-    model: str = "gemini-2.5-flash"
+    model: str = "gemini-3.8-flash"
     questions_per_session: int = 30          # model calls one visitor can make
     requests_per_minute: int = 15            # all messages from one network address
     model_calls_per_day: int = 1000          # all visitors together, to protect the API quota

@@ -20,11 +20,13 @@ class Chunk:
 
 
 class FakeModels:
-    def __init__(self, chunks=(), error=None):
-        self.chunks, self.error, self.calls = chunks, error, []
+    def __init__(self, chunks=(), error=None, missing=()):
+        self.chunks, self.error, self.missing, self.calls = chunks, error, set(missing), []
 
     def generate_content_stream(self, *, model, contents, config=None):
         self.calls.append((model, contents, config))
+        if model in self.missing:
+            raise ApiError(404, "models/x is not found")
         if self.error:
             raise self.error
         yield from self.chunks
@@ -93,3 +95,28 @@ def test_a_chunk_whose_text_cannot_be_read_is_skipped():
 def test_without_a_key_chatting_explains_why():
     with pytest.raises(llm.ChatError, match="isn't set up"):
         list(llm.NoModel().stream([], "hi"))
+
+
+def test_a_model_name_google_does_not_know_falls_back_to_the_next_one_and_is_remembered():
+    client = FakeClient(chunks=[Chunk("ok")], missing=["test-model", "first-fallback"])
+    chat = llm.GeminiChat("key", "test-model", 256, client, fallbacks=["first-fallback", "second-fallback"])
+    assert list(chat.stream([], "hi")) == ["ok"]
+    assert [c[0] for c in client.models.calls] == ["test-model", "first-fallback", "second-fallback"] and chat.model == "second-fallback"
+    list(chat.stream([], "again"))
+    assert client.models.calls[-1][0] == "second-fallback"                      # no repeat of the failed names
+
+
+def test_when_every_model_is_missing_the_visitor_gets_the_model_message():
+    client = FakeClient(missing=["test-model", "a", "b"])
+    chat = llm.GeminiChat("key", "test-model", 256, client, fallbacks=["a", "b"])
+    with pytest.raises(llm.ChatError) as info:
+        list(chat.stream([], "hi"))
+    assert str(info.value) == llm.MESSAGES["model"] and len(client.models.calls) == 3
+
+
+def test_other_errors_do_not_trigger_a_model_change():
+    client = FakeClient(error=ApiError(429))
+    chat = llm.GeminiChat("key", "test-model", 256, client, fallbacks=["a"])
+    with pytest.raises(llm.ChatError):
+        list(chat.stream([], "hi"))
+    assert [c[0] for c in client.models.calls] == ["test-model"]
